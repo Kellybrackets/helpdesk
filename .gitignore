@@ -47,3 +47,12 @@ desk/stats.html
 e2e/.auth
 playwright-report
 test-results
+
+# Local evaluation environment (never commit credentials or backups)
+.env
+.env.*
+!.env.example
+.dev/
+backups/
+*.sql
+*.sql.gz

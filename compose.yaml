@@ -1,0 +1,61 @@
+name: vati-helpdesk
+services:
+  bench-permissions:
+    image: frappe/bench@sha256:aae8521f4200c8c061b1ae7c514c4e83b38c2e178b5f3bb452ac3f54296f22a9
+    user: root
+    entrypoint: [bash, -c]
+    command: ['mkdir -p /bench/apps && chown 1000:1000 /bench /bench/apps']
+    volumes:
+      - bench-data:/bench
+  mariadb:
+    image: mariadb:10.11@sha256:d769e37960821dfdcf096954f6e7ac89f747e116c1bba98e48edd265dfc7deae
+    command: [--character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --skip-character-set-client-handshake]
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Run python3 scripts/configure_dev.py first}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  frappe:
+    image: frappe/bench@sha256:aae8521f4200c8c061b1ae7c514c4e83b38c2e178b5f3bb452ac3f54296f22a9
+    command: bash /workspace/docker/dev-init.sh
+    working_dir: /home/frappe
+    environment:
+      SHELL: /bin/bash
+      SITE_NAME: helpdesk.localhost
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Run python3 scripts/configure_dev.py first}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run python3 scripts/configure_dev.py first}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?Run python3 scripts/configure_dev.py first}
+      HTTP_PORT: ${HTTP_PORT:-8300}
+      SOCKETIO_PORT: ${SOCKETIO_PORT:-9300}
+    volumes:
+      - .:/workspace
+      - bench-data:/home/frappe/frappe-bench
+      - .:/home/frappe/frappe-bench/apps/helpdesk
+    ports:
+      - '127.0.0.1:${HTTP_PORT:-8300}:${HTTP_PORT:-8300}'
+      - '127.0.0.1:${SOCKETIO_PORT:-9300}:${SOCKETIO_PORT:-9300}'
+      - '127.0.0.1:${VITE_PORT:-8083}:${VITE_INTERNAL_PORT:-8380}'
+    depends_on:
+      bench-permissions: {condition: service_completed_successfully}
+      mariadb: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS -H "Host: helpdesk.localhost" http://localhost:$$HTTP_PORT/api/method/ping >/dev/null']
+      interval: 20s
+      timeout: 5s
+      retries: 60
+      start_period: 30m
+volumes:
+  mariadb-data:
+  bench-data:

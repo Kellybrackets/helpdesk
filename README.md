@@ -1,217 +1,127 @@
-<div align="center" markdown="1">
+# Frappe Helpdesk — development and evaluation fork
 
-<img src=".github/hd-logo.svg" alt="Frappe Helpdesk logo" width="80"/>
-<h1>Frappe Helpdesk</h1>
+This is our internal development/evaluation fork of **Frappe Helpdesk**, maintained by Vati's engineering team. It preserves the official application and Git history. The evaluation tooling lives on `dev`; `main` stays aligned with the official stable branch.
 
-**Customer Service, Made Simple and Effective**
+**Upstream:** https://github.com/frappe/helpdesk
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/frappe/helpdesk)
-[![codecov](https://codecov.io/github/frappe/helpdesk/branch/develop/graph/badge.svg?token=8ZXHCY4G9U)](https://codecov.io/github/frappe/helpdesk)
+**Our fork:** https://github.com/Kellybrackets/helpdesk
 
-<a href="https://trendshift.io/repositories/12764" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12764" alt="teableio%2Fteable | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
+**Baseline:** Helpdesk 1.31.0, upstream `main` at `7d7e394e7571fbdbdda04a65a279566b0ac9ce7f`.
 
-</div>
+The original project is copyright Frappe Technologies and contributors and licensed under [AGPL-3.0](LICENSE). See the [original README](docs/UPSTREAM_README.md) and [official documentation](https://docs.frappe.io/helpdesk).
 
+## Requirements
 
-<div align="center">
-	<img src="./.github/Hero2.png" alt="Hero Image" width="100%" />
-</div>
-<br />
-<div align="center">
-	<a href="https://frappe.io/helpdesk">Website</a>
-	-
-	<a href="https://docs.frappe.io/helpdesk">Documentation</a>
-</div>
+- Git 2.x; Docker Engine/Desktop with Compose v2 (tested versions are recorded in [verification](docs/VERIFICATION.md)).
+- Python 3.9+ on the host for the credential generator and HTTP verification script; `make` is convenient but optional.
+- A working Internet connection for GitHub, PyPI, npm, and Docker image downloads on the first start.
+- Recommended: at least 8 GB available to Docker and 15 GB free disk; initial dependency installation can take a while.
+- Host Node, Yarn, MariaDB, Redis and Bench are **not required**. The pinned Bench image provides Python, Node, Yarn and Bench. Framework and Telephony commits are pinned in `docker/versions.env`; JS dependencies use the upstream lockfiles.
 
-## Frappe Helpdesk
-Frappe Helpdesk is an 100% open-source Ticket Management tool which helps you  streamline your company's support, offers an easy setup, clean user interface, and automation tools to resolve customer queries efficiently.
-
-
-
-### Motivation
-Managing issues from our customers was a big challenge for us. We were using the ERPNext support module which was not very good in UI and the UX was also not good. We wanted to have a tool that can be easily integrated with our existing system and can be customized as per our needs. So we decided to build Frappe Helpdesk.
-
-### Key Features
-
-- **Agent and Customer Portal Views**: Dual portals for agents and customers to simplify issue submission and management.
-
-- **Customizable SLAs**: Discover how you can set and track SLAs for better response times.
-
-- **Assignment Rules**: Custom auto-assignment of tickets based on priority, issue type, or workload.
-
-- **Knowledge Base**: Learn how to create and manage help articles to empower users and reduce tickets.
-
-- **Saved Replies**: Pre-written replies for common queries to ensure quick and consistent communication.
-
-<details open>
-<summary >View Screenshots</summary>
-<h3></h3>
-
-<div align="center">
-	<sub>
-		Agent List View
-	</sub>
-</div>
-
-![Agent List View](.github/AgentListView.png)
-
-
-<div align="center">
-	<sub>
-		Upload articles and let your customer solve their queries through the Knowledge Base.
-	</sub>
-</div>
-
-![Knowledge Base](.github/KB.png)
-
-<div align="center">
-	<sub>
-		With advanced search, your customers will be recommended relevant articles regarding their issue.
-	</sub>
-</div>
-
-
-![Article Search](.github/Search2.png)
-
-
-
-</details>
-<br>
-
-
-### Under the Hood
-
-- [**Frappe Framework**](https://github.com/frappe/frappe): A full-stack web application framework written in Python and Javascript.
-
-- [**Frappe UI**](https://github.com/frappe/frappe-ui): A Vue-based UI library, to provide a modern user interface. 
-
-
-## Production Setup
-
-### Managed Hosting
-
-You can try [Frappe Cloud](https://frappecloud.com), a simple, user-friendly and sophisticated [open-source](https://github.com/frappe/press) platform to host Frappe applications with peace of mind.
-
-It takes care of installation, setup, upgrades, monitoring, maintenance and support of your Frappe deployments. It is a fully featured developer platform with an ability to manage and control multiple Frappe deployments.
-
-<div>
-	<a href="https://frappecloud.com/helpdesk/signup" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/try-on-fc-white.png">
-			<img src="https://frappe.io/files/try-on-fc-black.png" alt="Try on Frappe Cloud" height="28" />
-		</picture>
-	</a>
-</div>
-
-### Self Hosting
-
-Follow these steps to set up Frappe Helpdesk in production:
-
-**Step 1**: Download the easy install script
+## First-time setup
 
 ```bash
-wget https://frappe.io/easy-install.py
+git clone --branch dev https://github.com/Kellybrackets/helpdesk.git
+cd helpdesk
+git remote add upstream https://github.com/frappe/helpdesk.git
+python3 scripts/configure_dev.py
+docker compose up -d
+docker compose logs -f --tail=100 frappe
 ```
 
-**Step 2**: Run the deployment command
+Wait for `bench start` to report that the web server is listening. Exit the log viewer with Ctrl-C, then:
 
 ```bash
-python3 ./easy-install.py deploy \
-    --project=helpdesk_prod_setup \
-    --email=your_email.example.com \
-    --image=ghcr.io/frappe/helpdesk \
-    --version=stable \
-    --app=helpdesk \
-    --sitename subdomain.domain.tld
+make seed
+make verify
 ```
 
-Replace the following parameters with your values:
-- `your_email.example.com`: Your email address
-- `subdomain.domain.tld`: Your domain name where Helpdesk will be hosted
+`docker compose up -d` starts initialization in the background; it does not mean initialization has finished. Use `docker compose ps -a` and the logs to confirm readiness. `make seed` can be repeated: existing demo records are preserved, including developer edits and passwords.
 
-The script will set up a production-ready instance of Frappe Helpdesk with all the necessary configurations in about 5 minutes.
+| Interface | URL |
+| --- | --- |
+| Agent desk | http://helpdesk.localhost:8300/helpdesk/tickets |
+| Customer portal | http://helpdesk.localhost:8300/helpdesk/my-tickets |
+| Public knowledge base | http://helpdesk.localhost:8300/helpdesk/kb-public |
+| Login | http://helpdesk.localhost:8300/login |
+| Framework Desk | http://helpdesk.localhost:8300/app |
 
-## Development Setup
+Port 8300 avoids an existing local application on port 8000. HTTP, Socket.IO (9300), and optional Vite (8083) bind only to `127.0.0.1`; MariaDB and Redis are not exposed on the host. Browsers normally resolve `*.localhost` automatically. If yours does not, add `127.0.0.1 helpdesk.localhost` to your hosts file. CLI checks use `127.0.0.1` and an explicit site header, so they do not require DNS changes.
 
-### Docker
+## Local credentials
 
-You need Docker, docker-compose and git setup on your machine. Refer [Docker documentation](https://docs.docker.com/). After that, follow below steps:
+Open the ignored `.env` file locally. `ADMIN_PASSWORD` is the password for `Administrator`; `DEMO_PASSWORD` is shared by the fake demo users. Passwords are generated per checkout, never committed. The generator preserves an existing `.env` and writes new files with mode 0600.
 
-**Step 1**: Setup folder and download the required files
+| Persona | Username |
+| --- | --- |
+| Administrator | `Administrator` |
+| Support Admin | `support.admin@helpdesk.example.test` |
+| Tier 1 Agent | `tier1@helpdesk.example.test` |
+| Tier 2 Agent | `tier2@helpdesk.example.test` |
+| Technical Support Agent | `technical@helpdesk.example.test` |
+| Service Manager | `manager@helpdesk.example.test` |
+| Customer manager | `customer1@cedar.example.test` |
+| Customer member | `customer2@cedar.example.test` |
 
-    mkdir frappe-helpdesk
-    cd frappe-helpdesk
+There are also `customer1`–`customer4` accounts at `copper.example.test`, `cloudline.example.test`, `meadow.example.test`, and `maple.example.test`. Use a separate browser profile/private window for customer testing. Changing `.env` after initialization does not reset existing site or user passwords.
 
-    # Download the docker-compose file
-    wget -O docker-compose.yml https://raw.githubusercontent.com/frappe/helpdesk/develop/docker/docker-compose.yml
+## Demo contents
 
-    # Download the setup script
-    wget -O init.sh https://raw.githubusercontent.com/frappe/helpdesk/develop/docker/init.sh
+- Five agents, three teams and their native assignment rules.
+- Twenty customer users and contacts across five fictional organizations: finance, retail, telecom, public services and advisory.
+- Fifty `[DEMO-001]`–`[DEMO-050]` tickets across four priorities and four native statuses: Open, Replied, Resolved and Closed. Replied appears as Awaiting Response to customers.
+- Native ticket types, category tags, assignments, internal comments, agent/customer replies and resolution notes. Demo timestamps span roughly four weeks.
+- Two example SLA policies, a service calendar, four saved replies and ten published knowledge-base articles.
+- Urgent examples are routed to Demo Escalations with a tighter SLA. This demonstrates a manual escalation process and native routing; it does not introduce a custom escalation engine.
 
-**Step 2**: Run the container and daemonize it
+The seeder is `helpdesk/demo/seed.py`, invoked with:
 
-    docker compose up -d
+```bash
+docker compose exec -T -w /home/frappe/frappe-bench frappe \
+  bench --site helpdesk.localhost execute helpdesk.demo.seed.run
+```
 
-**Step 3**: The site [http://helpdesk.localhost:8000/helpdesk](http://helpdesk.localhost:8000/helpdesk) should now be available. The default credentials are:
-- Username: Administrator
-- Password: admin
+It requires Administrator, `developer_mode`, `allow_demo_seed`, `mute_emails`, and a `DEMO_PASSWORD` environment variable. These are configured by the Docker initializer. It does not delete records. Stable natural keys prevent duplicates. Existing fixture records are left unchanged; delete/rebuild an expendable site if you need a complete reset. Synthetic conversation dates are explicitly backdated; this is demonstration history, not an audit log of real events. Upstream's welcome ticket and draft article remain present alongside the fixtures.
 
-### Local
+## Daily workflow
 
-To setup the repository locally follow the steps mentioned below:
+```bash
+make up         # configure if needed, then start containers
+make logs       # application logs
+make shell      # shell in the Bench directory
+make seed       # add missing demo fixtures
+make build      # rebuild Helpdesk frontend after edits
+make migrate    # apply schema/patch changes after updating code
+make verify     # live HTTP checks, including ticket mutations
+make down       # stop containers; preserve site/database volumes
+```
 
-1. Install bench and setup a `frappe-bench` directory by following the [Installation Steps](https://frappeframework.com/docs/user/en/installation)
-1. Start the server by running `bench start`
-1. In a separate terminal window, create a new site by running `bench new-site helpdesk.test`
-1. Map your site to localhost with the command `bench --site helpdesk.test add-to-hosts`
-1. Get the Telephony app. Run `bench get-app https://github.com/frappe/telephony`
-1. Get the Helpdesk app. Run `bench get-app https://github.com/frappe/helpdesk`
-1. Run `bench --site helpdesk.test install-app helpdesk`.
-1. Run `bench build --app helpdesk`
-1. Now open the URL `http://helpdesk.test:8000/helpdesk` in your browser, you should see the app running
+The checkout is mounted at `/home/frappe/frappe-bench/apps/helpdesk`. Python code is used directly; compiled frontend assets are served by Bench. For frontend hot reload, open a second terminal:
 
+```bash
+docker compose exec -w /home/frappe/frappe-bench/apps/helpdesk/desk frappe \
+  yarn dev --host 0.0.0.0
+```
 
-**For Frontend Development**
-1. Open a new terminal session and cd into `frappe-bench/apps/helpdesk/desk`, and run the following commands:
-    ```
-    yarn install
-    yarn dev or yarn dev --host helpdesk.test
-    ```
-1. Now, you can access the site on vite dev server at `http://helpdesk.test:8080`
+Then visit `http://helpdesk.localhost:8083/helpdesk`. Keep Bench running for API requests, assets and realtime events. The normal 8300 URL serves the built frontend. Frappe UI derives its internal Vite port as `HTTP_PORT + 80` (8380 by default). If you change `HTTP_PORT`, set `VITE_INTERNAL_PORT` in `.env` to that sum; `VITE_PORT` is the separate host-facing port.
 
-**Note:** You'll find all the code related to Helpdesk's frontend inside `frappe-bench/apps/helpdesk/desk`
+The official minimal Docker example remains in `docker/docker-compose.yml` and `docker/init.sh` for reference. Use the root `compose.yaml` for this fork: it provides persistent Bench storage, mounts this checkout, pins dependencies, generates credentials and isolates ports.
 
+## Safety, persistence and troubleshooting
 
-## Compatibility matrix 
+This is a local evaluation environment. Outgoing email is muted and Helpdesk email workflows are disabled; no SMTP, OAuth, API tokens or real customer data are configured. Telephony is installed as an upstream dependency without a provider account. Do not use these demo accounts or the development server in production.
 
-| Helpdesk Branch | Compatible Frappe Framework Version |
-|-----------------|-------------------------------------|
-| main            | version-15                          |
-| main            | version-16                          |
-| develop         | develop branch                      |
+- `.env`, `.dev/`, database dumps, logs and generated assets are ignored. Never commit site configurations, credentials, production data or private keys.
+- Named volumes hold the database, installed apps and site files. Ordinary `docker compose down` preserves them. `docker compose down -v` **permanently deletes this project's database and Bench volumes**; use it only to reset an expendable evaluation environment.
+- Do not delete `.env` while retaining the database volume. Its root password must match the initialized database.
+- If initialization exits, read `docker compose logs --tail=150 frappe`, fix the reported cause, and run `docker compose up -d` again. A `.bench-ready` marker is written only after app installation/configuration succeeds.
+- Restarting does not silently upgrade apps or migrate schemas. Follow [UPSTREAM.md](docs/UPSTREAM.md).
+- Ports can be changed in `.env` before first initialization. For an existing Bench, also update `webserver_port`, `socketio_port`, site `host_name`, and regenerate its Procfile, then restart.
+- To back up: `docker compose exec -w /home/frappe/frappe-bench frappe bench --site helpdesk.localhost backup --with-files`. Backups inside the Bench volume must be copied to a secure location before deleting that volume.
 
+## Engineering documentation
 
-## Learn and connect
-
-- [Telegram Public Group](https://t.me/frappedesk)
-- [Discuss Forum](https://discuss.frappe.io/c/frappehelpdesk/69)
-- [Documentation](https://docs.frappe.io/helpdesk)
-
-## Contributing
-
-1. [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
-1. [Report Security Vulnerabilities](https://frappe.io/security)
-1. [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
-2. [Translations](https://crowdin.com/project/frappe)
-
-<br>
-<br>
-<div align="center">
-	<a href="https://frappe.io" target="_blank">
-		<picture>
-			<source media="(prefers-color-scheme: dark)" srcset="https://frappe.io/files/Frappe-white.png">
-			<img src="https://frappe.io/files/Frappe-black.png" alt="Frappe Technologies" height="28"/>
-		</picture>
-	</a>
-</div>
+- [Architecture and request/data flow](docs/ARCHITECTURE.md)
+- [Where to explore and change code](docs/DEVELOPER_GUIDE.md)
+- [Safe upstream updates and branch workflow](docs/UPSTREAM.md)
+- [Verification results and limitations](docs/VERIFICATION.md)
